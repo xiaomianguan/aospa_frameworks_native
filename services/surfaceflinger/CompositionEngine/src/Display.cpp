@@ -15,6 +15,8 @@
  */
 
 #include <android-base/stringprintf.h>
+#include <compositionengine/FodExtension.h>
+#include <cstring>
 #include <compositionengine/CompositionEngine.h>
 #include <compositionengine/CompositionRefreshArgs.h>
 #include <compositionengine/DisplayCreationArgs.h>
@@ -383,6 +385,23 @@ compositionengine::Output::FrameFences Display::presentAndGetFrameFences() {
 
     if (!mId) {
         return result;
+    }
+
+    if (!mIsVirtual && mConnectionType == DisplayConnectionType::Internal && onFodFrame) {
+        constexpr char prefix[] = "Fingerprint on display.touched#";
+        bool pressed = false;
+        sp<Fence> fodFence = result.clientTargetAcquireFence;
+        for (const auto* layer : getOutputLayersOrderedByZ()) {
+            if (std::strncmp(layer->getLayerFE().getDebugName(), prefix, sizeof(prefix) - 1) == 0) {
+                pressed = true;
+                const auto* state = layer->getLayerFE().getCompositionState();
+                if (!getState().usesClientComposition && state && state->acquireFence) {
+                    fodFence = state->acquireFence;
+                }
+                break;
+            }
+        }
+        onFodFrame(pressed, fodFence ? fodFence->get() : -1);
     }
 
     auto& hwc = getCompositionEngine().getHwComposer();

@@ -25,4 +25,7 @@
 extern uint32_t getFodZOrder(uint32_t z, bool touched);
 extern uint64_t getFodUsageBits(uint64_t usageBits, bool touched);
 
+// Optional device hook; older FOD libraries need not implement it.
+extern void onFodFrame(bool pressed, int acquireFenceFd) __attribute__((weak));
+
 #endif /* __FOD_EXTENSION__H__ */
